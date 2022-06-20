@@ -1,0 +1,8 @@
+Django
+django-rest-framework
+dj-database-url
+psycopg2
+django-environ
+django-staff-sso-client
+
+sentry-sdk
