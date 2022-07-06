@@ -1,8 +1,11 @@
+# -*- coding: utf-8 -*-
 from pathlib import Path
 
 import dj_database_url
 import environ
 import sentry_sdk
+
+import sys
 
 # from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -15,7 +18,7 @@ env = environ.Env(
     RESTRICT_ADMIN=(bool, False),
 )
 
-ENV_FILE = BASE_DIR / ".env"
+ENV_FILE = Path.joinpath(BASE_DIR, ".env")
 
 if ENV_FILE.exists():
     environ.Env.read_env(ENV_FILE)
@@ -30,10 +33,46 @@ VCAP_SERVICES = env.json("VCAP_SERVICES", {})
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don"t run with debug turned on in production!
-DEBUG = env("DEBUG")
-
+DEBUG = env.bool("DEBUG")
+DEBUG_LEVEL = env("DEBUG_LEVEL", default="INFO")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
+# Deployment environment
+DEPLOYMENT_ENVIRONMENT = env("DEPLOYMENT_ENVIRONMENT", default="dev")
+
+# GITHUB variables
+GITHUB_API_URL = env("GITHUB_API_URL", default="https://api.github.com/")
+GITHUB_AUTH_TOKEN = env("GITHUB_AUTH_TOKEN")
+GITHUB_ORG_NAME = env("GITHUB_ORG_NAME")
+
+LOGGING = {
+    "version": 1.0,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "%(levelname)s %(message)s"},
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+            "stream": sys.stdout,
+        },
+    },
+    "loggers": {
+        "root": {
+            "handlers": ["console"],
+            "level": f"{DEBUG_LEVEL}",
+        },
+    },
+}
+
+# Test Specific settings
+if (
+    DEPLOYMENT_ENVIRONMENT.lower() != "prod"
+    or DEPLOYMENT_ENVIRONMENT.lower() != "production"
+):
+    TEST_GIT_ACCOUNT = env("TEST_GIT_ACCOUNT")
+    TEST_GIT_TEAMS = env.list("TEST_GIT_TEAMS")
 
 # Application definition
 
@@ -51,6 +90,7 @@ INSTALLED_APPS = [
     "core",
     "api",
     "request",
+    "github",
 ]
 
 MIDDLEWARE = [
@@ -87,9 +127,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    "default": dj_database_url.config()
-}
+DATABASES = {"default": dj_database_url.config()}
 
 
 # Password validation
@@ -135,14 +173,14 @@ STATIC_URL = "/static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-sentry_sdk.init(
-    env("SENTRY_DSN"),
-    environment=env("SENTRY_ENVIRONMENT"),
-    integrations=[
-        DjangoIntegration(),
-        # CeleryIntegration()
-    ]
-)
+# sentry_sdk.init(
+#     env("SENTRY_DSN"),
+#     environment=env("SENTRY_ENVIRONMENT"),
+#     integrations=[
+#         DjangoIntegration(),
+#         # CeleryIntegration()
+#     ]
+# )
 
 AUTHBROKER_URL = env("AUTHBROKER_URL")
 AUTHBROKER_CLIENT_ID = env("AUTHBROKER_CLIENT_ID")
@@ -161,12 +199,8 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
-    "DEFAULT_PARSER_CLASSES": (
-        "rest_framework.parsers.JSONParser",
-    ),
-    "DEFAULT_RENDERER_CLASSES": (
-        "rest_framework.renderers.JSONRenderer",
-    ),
+    "DEFAULT_PARSER_CLASSES": ("rest_framework.parsers.JSONParser",),
+    "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
