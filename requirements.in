@@ -8,5 +8,5 @@ django-staff-sso-client
 sentry-sdk
 
 # Dependabot fixes
-oauthlib==3.2.1
+oauthlib==3.2.2
 django==4.0.9

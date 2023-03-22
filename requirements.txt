@@ -29,7 +29,7 @@ djangorestframework==3.13.1
     # via django-rest-framework
 idna==3.3
     # via requests
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via
     #   -r requirements.in
     #   requests-oauthlib
